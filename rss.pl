@@ -83,8 +83,8 @@ sub getReadability {
 
     # Check the outcome of the response
     if (! $res->is_success) {
-        print $readabilityURL, "\n";
-        die sprintf  "*Error* from GET: %s", $res->status_line;
+        warn sprintf  "*Error* from GET of: %s: %s", $readabilityURL, $res->status_line;
+        return { content => "There was an error getting the content" };
     }
     # print $res->content;
     return decode_json($res->content);
