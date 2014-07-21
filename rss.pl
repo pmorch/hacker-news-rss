@@ -7,6 +7,7 @@ use JSON;
 use Data::Dumper;
 use DateTime::Format::Mail;
 use URI::Escape;
+use HTML::Entities;
 use utf8;
 
 =head1 
@@ -25,23 +26,42 @@ use utf8;
 my $jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
 my $readabilityAPIKey = 'd0e009a679aa2ef6b0830ff63b5a2a0660c55d2c';
 
+my $db = 'descriptions.db';
+
+# my $db = 'foo.db';
+
 my $ua = LWP::UserAgent->new(
    # ssl_opts => { verify_hostname => 0 },
 );
 # $ua->agent("MyApp/0.1 ");
 
-# Create a request
-my $req = HTTP::Request->new(GET => $jsonURL);
+sub getFirehoseJSON {
 
-# Pass request to the user agent and get a response back
-my $res = $ua->request($req);
+    # Create a request
+    my $req = HTTP::Request->new(GET => $jsonURL);
 
-# Check the outcome of the response
-if (! $res->is_success) {
-    die sprintf  "*Error* from GET: %s", $res->status_line;
+    # Pass request to the user agent and get a response back
+    my $res = $ua->request($req);
+
+    # Check the outcome of the response
+    if (! $res->is_success) {
+        die sprintf  "*Error* from GET: %s", $res->status_line;
+    }
+    return $res->content;
 }
+
+my $json = getFirehoseJSON();
+
+# my $json;
+# open(my $i, "ost2.json");
+# {
+#     local $/;
+#     $json = <$i>;
+# }
+# close $i;
+
 # print $res->content;
-my $firehose = decode_json($res->content);
+my $firehose = decode_json($json);
 
 # my $d = Data::Dumper->new([$firehose]);
 # $d->Sortkeys(1);
@@ -56,7 +76,7 @@ $rss->channel(
   description  => "by Peter Valdemar Mørch",
 );
 use DBI;
-my $dbh = DBI->connect("dbi:SQLite2:dbname=descriptions.db","","");
+my $dbh = DBI->connect("dbi:SQLite2:dbname=$db","","");
 
 my $getDescrSth = $dbh->prepare('
     SELECT description
@@ -83,17 +103,33 @@ sub getReadability {
 
     # Check the outcome of the response
     if (! $res->is_success) {
-        warn sprintf  "*Error* from GET of: %s: %s", $readabilityURL, $res->status_line;
+        warn sprintf  "*Error* from GET of: %s: %s",
+            $readabilityURL, $res->status_line;
         return { content => "There was an error getting the content" };
     }
-    # print $res->content;
     return decode_json($res->content);
 }
 
 sub getDescription {
     my ($hit) = @_;
-    my $readability = getReadability($hit->{url});
-    return $readability->{content};
+
+    my $hnewsUrl = sprintf "https://news.ycombinator.com/item?id=%d",
+        $hit->{objectID};
+
+    my $readability = getReadability(
+        $hit->{url} ?  $hit->{url} : $hnewsUrl
+    );
+
+    my $encURL = encode_entities($hit->{url});
+    my $encHnewsURL = encode_entities($hnewsUrl);
+
+    my $description = sprintf <<END, $encURL, $encURL, $encHnewsURL, $readability->{content};
+    <p>URL: <a href="%s">%s</a>, See on <a href="%s">Hacker News</a></p>
+    %s
+END
+
+    # print STDERR $description;
+    return $description;
 }
 
 # binmode(STDOUT, ":utf8");
@@ -108,7 +144,9 @@ foreach my $hit (@{ $firehose->{hits} }) {
     my $dt = DateTime->from_epoch( epoch => $hit->{created_at_i} );
     my $dateStr = DateTime::Format::Mail->format_datetime( $dt );
     $rss->add_item(
-        title       => sprintf("%s (%d pts)", $hit->{title}, $hit->{points}),
+        title       => sprintf("%s%s (%d pts)",
+                            $hit->{url} ? '' : 'HNInternal: ',
+                            $hit->{title}, $hit->{points}),
         link        => $hit->{url},
         description => $description,
         dc => {
