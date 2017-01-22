@@ -24,7 +24,7 @@ use utf8;
 
 # See https://hn.algolia.com/api
 my $jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
-my $readabilityAPIKey = 'd0e009a679aa2ef6b0830ff63b5a2a0660c55d2c';
+my $mercuryAPIKey = 'F0rr1rmeRl5wVHtpHxNYl0S6wTZWrheWCwrcDEod';
 
 my $db = 'descriptions.db';
 
@@ -72,7 +72,7 @@ my $firehose = decode_json($json);
 # my $rss = new XML::RSS (version => '1.0', encoding=>'ISO-8859-1');
 my $rss = new XML::RSS (version => '1.0');
 $rss->channel(
-  title        => "Hacker News 100 - Readability Contents",
+  title        => "Hacker News 100 - Readable Contents",
   description  => "by Peter Valdemar Mørch",
 );
 use DBI;
@@ -90,21 +90,21 @@ my $insertDescrSth = $dbh->prepare('
     VALUES (?,?,?)
 ');
 
-sub getReadability {
+sub getMercury {
     my ($url) = @_;
-    printf STDERR "Getting readability for $url\n";
-    my $readabilityURL = sprintf
-        "https://www.readability.com/api/content/v1/parser?url=%s&token=%s",
-        uri_escape($url),
-        $readabilityAPIKey;
+    printf STDERR "Getting mercury for $url\n";
+    my $mercuryURL = sprintf
+        'https://mercury.postlight.com/parser?url=%s',
+        uri_escape($url);
 
-    my $req = HTTP::Request->new(GET => $readabilityURL);
+    my $req = HTTP::Request->new(GET => $mercuryURL);
+    $req->header('x-api-key', $mercuryAPIKey);
     my $res = $ua->request($req);
 
     # Check the outcome of the response
-    if (! $res->is_success) {
+    if (! $res->is_success || $res->content eq 'null') {
         warn sprintf  "*Error* from GET of: %s: %s",
-            $readabilityURL, $res->status_line;
+            $mercuryURL, $res->status_line;
         return { content => "There was an error getting the content" };
     }
     return decode_json($res->content);
@@ -116,14 +116,14 @@ sub getDescription {
     my $hnewsUrl = sprintf "https://news.ycombinator.com/item?id=%d",
         $hit->{objectID};
 
-    my $readability = getReadability(
+    my $mercury = getMercury(
         $hit->{url} ?  $hit->{url} : $hnewsUrl
     );
 
     my $encURL = encode_entities($hit->{url});
     my $encHnewsURL = encode_entities($hnewsUrl);
 
-    my $description = sprintf <<END, $encURL, $encURL, $encHnewsURL, $readability->{content};
+    my $description = sprintf <<END, $encURL, $encURL, $encHnewsURL, $mercury->{content};
     <p>URL: <a href="%s">%s</a>, See on <a href="%s">Hacker News</a></p>
     %s
 END
