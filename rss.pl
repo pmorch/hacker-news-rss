@@ -20,7 +20,7 @@ use utf8;
     sqlite> .schema descriptions
     CREATE TABLE descriptions(objectID integer primary key, description text, createTime integer);
 
-    sqlite3 descriptions.db 'DELETE FROM decriptions;'
+    sqlite3 descriptions.db 'DELETE FROM descriptions;'
     sqlite3 descriptions.db 'VACUUM;'
 
 
