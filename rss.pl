@@ -10,7 +10,7 @@ use URI::Escape;
 use HTML::Entities;
 use utf8;
 
-=head1 
+=head1
 
     base@peter:~/work/hackerNewsRSS> sqlite3 descriptions.db
     SQLite version 3.7.9 2011-11-01 00:52:41
@@ -19,6 +19,11 @@ use utf8;
     sqlite> SELECT * from descriptions;
     sqlite> .schema descriptions
     CREATE TABLE descriptions(objectID integer primary key, description text, createTime integer);
+
+    sqlite3 descriptions.db 'DELETE FROM decriptions;'
+    sqlite3 descriptions.db 'VACUUM;'
+
+
 
 =cut
 
@@ -113,27 +118,29 @@ sub getMercury {
 sub getDescription {
     my ($hit) = @_;
 
-    my $hnewsUrl = sprintf "https://news.ycombinator.com/item?id=%d",
-        $hit->{objectID};
-
     my $mercury = getMercury(
-        $hit->{url} ?  $hit->{url} : $hnewsUrl
+        $hit->{url} ?  $hit->{url} : $hit->{hnewsUrl}
     );
 
     my $encURL = encode_entities($hit->{url});
-    my $encHnewsURL = encode_entities($hnewsUrl);
+    my $encHnewsURL = encode_entities($hit->{hnewsUrl});
 
-    my $description = sprintf <<END, $encURL, $encURL, $encHnewsURL, $mercury->{content};
-    <p>URL: <a href="%s">%s</a>, See on <a href="%s">Hacker News</a></p>
-    %s
-END
-
-    # print STDERR $description;
+    my $description = '<p>';
+    if ($hit->{url}) {
+        $description .= sprintf 'URL: <a href="%s">%s</a>, ', $encURL, $encURL;
+    }
+    $description .= sprintf qq(See on <a href="%s">Hacker News</a></p>,\n%s\n),
+        $encHnewsURL,
+        $mercury->{content};
     return $description;
 }
 
 # binmode(STDOUT, ":utf8");
 foreach my $hit (@{ $firehose->{hits} }) {
+    my $hnewsUrl = sprintf "https://news.ycombinator.com/item?id=%d",
+        $hit->{objectID};
+    $hit->{hnewsUrl} = $hnewsUrl;
+
     $getDescrSth->execute($hit->{objectID});
 
     my ($description) = $getDescrSth->fetchrow_array();
@@ -143,21 +150,19 @@ foreach my $hit (@{ $firehose->{hits} }) {
     }
     my $dt = DateTime->from_epoch( epoch => $hit->{created_at_i} );
     my $dateStr = DateTime::Format::Mail->format_datetime( $dt );
-    $rss->add_item(
+    my %item = (
         title       => sprintf("%s%s (%d pts)",
                             $hit->{url} ? '' : 'HNInternal: ',
                             $hit->{title}, $hit->{points}),
-        link        => $hit->{url},
+        link        => $hit->{url} // $hnewsUrl,
         description => $description,
         dc => {
             date => $dateStr
         }
     );
-    # printf "T: %s\nURL: %s\nPoints: %d\nDescription: %s\n\n",
-    #     $hit->{title},
-    #     $hit->{url},
-    #     $hit->{points},
-    #     $description;
+    # use Data::Dump qw(dump);
+    # print dump(\%item), "\n";
+    $rss->add_item(%item);
 }
 
 print $rss->as_string();
