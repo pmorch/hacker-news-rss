@@ -3,8 +3,9 @@ services:
   hacker-news-rss:
     image: "nginx:latest"
     volumes:
-      - ./output:/usr/share/nginx/html
+      - ./output:/usr/share/nginx/html/hacker-news-rss
     ports:
-      - 8800:80
+      # Unfortunately, feedly won't access non-80,443 ports
+      - 80:80
     restart: unless-stopped
 

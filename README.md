@@ -30,4 +30,4 @@ To tidy up later:
 # Make sure this runs periodically
 
     sudo cp hackerNewsCronD /etc/cron.d
-    sudo chmod root: /etc/cron.d/hackerNewsCronD
+    sudo chown root: /etc/cron.d/hackerNewsCronD
