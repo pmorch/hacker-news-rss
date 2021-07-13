@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
+use Encode;
 use LWP::UserAgent;
 use XML::RSS;
 use JSON;
@@ -8,6 +9,9 @@ use Data::Dumper;
 use DateTime::Format::Mail;
 use URI::Escape;
 use HTML::Entities;
+use FindBin;
+use IPC::Run qw(run);
+
 use utf8;
 
 =head1
@@ -20,11 +24,11 @@ use utf8;
     sqlite> .schema descriptions
     CREATE TABLE descriptions(objectID integer primary key, description text, createTime integer);
 
-    sqlite3 descriptions.db 'DELETE FROM descriptions;'
-    sqlite3 descriptions.db 'VACUUM;'
+    # sqlite3 descriptions.db 'DELETE FROM descriptions;'
+    # sqlite3 descriptions.db 'VACUUM;'
 
-
-
+    sqlite descriptions.db 'DELETE FROM descriptions;'
+    sqlite descriptions.db 'VACUUM;'
 =cut
 
 # See https://hn.algolia.com/api
@@ -95,30 +99,37 @@ my $insertDescrSth = $dbh->prepare('
     VALUES (?,?,?)
 ');
 
-sub getMercury {
+sub getReadable {
     my ($url) = @_;
-    printf STDERR "Getting mercury for $url\n";
-    my $mercuryURL = sprintf
-        'https://mercury.postlight.com/parser?url=%s',
-        uri_escape($url);
+    printf STDERR "Getting %s\n", $url;
+    my $exec = "$FindBin::Bin/python/bin/breadability";
+    my $stdout;
+    my $stderr;
+    my $success = run(
+        [ $exec, $url ],
+        '>', \$stdout,
+        '2>', \$stderr
+    );
+    my $readable;
+    if ($success) {
+        $readable = $stdout;
+    } else {
 
-    my $req = HTTP::Request->new(GET => $mercuryURL);
-    $req->header('x-api-key', $mercuryAPIKey);
-    my $res = $ua->request($req);
-
-    # Check the outcome of the response
-    if (! $res->is_success || $res->content eq 'null') {
-        warn sprintf  "*Error* from GET of: %s: %s",
-            $mercuryURL, $res->status_line;
-        return { content => "There was an error getting the content" };
+        $readable = qq{Couldn't get $url with breadability.};
+        if ($stdout) {
+            $readable .= qq{ STDOUT: $stdout};
+        }
+        if ($stderr) {
+            $readable .= qq{ STDERR: $stderr};
+        }
     }
-    return decode_json($res->content);
+    return $readable;
 }
 
 sub getDescription {
     my ($hit) = @_;
 
-    my $mercury = getMercury(
+    my $readable = getReadable(
         $hit->{url} ?  $hit->{url} : $hit->{hnewsUrl}
     );
 
@@ -129,9 +140,9 @@ sub getDescription {
     if ($hit->{url}) {
         $description .= sprintf 'URL: <a href="%s">%s</a>, ', $encURL, $encURL;
     }
-    $description .= sprintf qq(See on <a href="%s">Hacker News</a></p>,\n%s\n),
+    $description .= sprintf qq(See on <a href="%s">Hacker News</a></p>\n%s\n),
         $encHnewsURL,
-        $mercury->{content};
+        $readable;
     return $description;
 }
 
@@ -148,6 +159,8 @@ foreach my $hit (@{ $firehose->{hits} }) {
         $description = getDescription($hit);
         $insertDescrSth->execute($hit->{objectID}, $description, time);
     }
+    my $descriptionChars = Encode::decode('UTF-8', $description);
+    # $descriptionChars = 'æøå don’t in UTF8<br>' . $descriptionChars;
     my $dt = DateTime->from_epoch( epoch => $hit->{created_at_i} );
     my $dateStr = DateTime::Format::Mail->format_datetime( $dt );
     my %item = (
@@ -155,7 +168,7 @@ foreach my $hit (@{ $firehose->{hits} }) {
                             $hit->{url} ? '' : 'HNInternal: ',
                             $hit->{title}, $hit->{points}),
         link        => $hit->{url} // $hnewsUrl,
-        description => $description,
+        description => $descriptionChars,
         dc => {
             date => $dateStr
         }
