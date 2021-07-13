@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  hacker-news-rss:
+    image: "nginx:latest"
+    volumes:
+      - ./output:/usr/share/nginx/html
+    ports:
+      - 8800:80
+    restart: unless-stopped
+
