@@ -1,0 +1,28 @@
+{
+  "name": "hacker-news-rss",
+  "version": "1.0.0",
+  "description": "sudo apt install docker.io docker-compose sqlite libwww-perl libxml-rss-perl libjson-perl libipc-run-perl libdbd-sqlite2-perl virtualenv",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pmorch/hacker-news-rss.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pmorch/hacker-news-rss/issues"
+  },
+  "homepage": "https://github.com/pmorch/hacker-news-rss#readme",
+  "dependencies": {
+    "@mozilla/readability": "^0.4.1",
+    "axios": "^0.21.1",
+    "feed": "^4.2.2",
+    "he": "^1.2.0",
+    "jsdom": "^11.6.2",
+    "sqlite3": "^5.0.2"
+  }
+}

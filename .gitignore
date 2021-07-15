@@ -1,3 +1,6 @@
 output
 python
+hacker-news-descriptions.db
 descriptions.db
+package-lock.json
+node_modules

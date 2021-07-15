@@ -8,10 +8,9 @@
 
 To tidy up later:
 
-    sqlite descriptions.db 'SELECT COUNT(*) FROM descriptions;'
+    sqlite3 descriptions.db 'SELECT COUNT(*) FROM descriptions;'
 
-    sqlite descriptions.db 'DELETE FROM descriptions;'
-    sqlite descriptions.db 'VACUUM;'
+    sqlite3 descriptions.db 'DELETE FROM descriptions; VACUUM;'
 
 # Setup virtualenv
 
