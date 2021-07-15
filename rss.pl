@@ -14,26 +14,8 @@ use IPC::Run qw(run);
 
 use utf8;
 
-=head1
-
-    base@peter:~/work/hackerNewsRSS> sqlite3 descriptions.db
-    SQLite version 3.7.9 2011-11-01 00:52:41
-    Enter ".help" for instructions
-    Enter SQL statements terminated with a ";"
-    sqlite> SELECT * from descriptions;
-    sqlite> .schema descriptions
-    CREATE TABLE descriptions(objectID integer primary key, description text, createTime integer);
-
-    # sqlite3 descriptions.db 'DELETE FROM descriptions;'
-    # sqlite3 descriptions.db 'VACUUM;'
-
-    sqlite descriptions.db 'DELETE FROM descriptions;'
-    sqlite descriptions.db 'VACUUM;'
-=cut
-
 # See https://hn.algolia.com/api
 my $jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
-my $mercuryAPIKey = 'F0rr1rmeRl5wVHtpHxNYl0S6wTZWrheWCwrcDEod';
 
 my $db = 'descriptions.db';
 
