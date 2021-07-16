@@ -120,7 +120,8 @@ async function addHit(feed, hit) {
     // console.error("   ", date.toISOString())
 
     feed.addItem({
-        title: hit.title,
+        title:
+            `${hit.url ? '' : 'HNInternal '}${hit.title} (${hit.points} pts)`,
         link: hit.url,
         // content: description,
         description,
