@@ -1,6 +1,6 @@
 #!/usr/bin/node
 const { Readability } = require('@mozilla/readability');
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 const axios = require('axios');
 const process = require('process');
 const fs = require('fs')
@@ -39,29 +39,27 @@ async function initDatabase() {
     }
 }
 
-function muteStderr(lambda) {
-    const oldWrite = process.stderr.write;
-    const stderrStream = fs.createWriteStream(NULL_DEVICE)
-    const stderrStreamWrite = stderrStream.write.bind(stderrStream)
-    process.stderr.write = stderrStreamWrite
-    let returnvalue;
-    try {
-        returnvalue = lambda()
-    } catch(error) {
-        throw error;
-    } finally {
-        process.stderr.write = oldWrite
+function getJSDOM(text, url) {
+    const virtualConsole = new VirtualConsole()
+    for (let event of [ 'jsdomError', 'error', 'warn', 'info', 'dir' ]) {
+        virtualConsole.on(event, (error) => {
+            if (error.detail && error.detail.length &&
+                error.detail.length > detailLimit) {
+                error.detail =
+                    `long string, length:${
+                    error.detail.length}, first ${detailLimit
+                    } chars:\n${error.detail.substring(0, detailLimit)}`
+            }
+            console.log("vconsole " + event, error)
+        });
     }
-    return returnvalue
+    return new JSDOM(text, { virtualConsole, url })
 }
 
 async function readability(url) {
     const response = await axios.get(url)
     html = response.data
-    var doc = muteStderr(() => {
-        // console.log(html, url);
-        return new JSDOM(html, { url });
-    });
+    var doc = getJSDOM(html, url)
     let reader = new Readability(doc.window.document);
     let article = reader.parse();
     return article != null ? article.content : '&lt;Unparsable&gt;';
