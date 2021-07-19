@@ -26,14 +26,16 @@ async function initDatabase() {
         SELECT name
           FROM sqlite_master
          WHERE type='table'
-           AND name='descriptions';
+           AND name='articles';
     `)
     if (existsRows.length == 0) {
         await db.asyncRun(`
-            CREATE TABLE descriptions (
+            CREATE TABLE articles (
                 objectID integer primary key,
+                createTime integer,
+                title text,
                 description text,
-                createTime integer
+                url text
             )
         `);
     }
@@ -65,36 +67,12 @@ async function readability(url) {
     return article != null ? article.content : '&lt;Unparsable&gt;';
 }
 
-async function getMainDescription(hit, url) {
-    const row = await db.asyncGet(
-        `
-            SELECT *
-              FROM descriptions
-             WHERE objectID=?
-        `,
-        hit.objectID
+async function dbHasArticle(objectID) {
+    let row = await db.asyncGet(
+        `SELECT objectID FROM articles WHERE objectID=?`,
+        objectID
     )
-    if (row) {
-        return row.description
-    }
-
-    process.stderr.write(`Getting: ${url}\n`);
-    const description = await readability(url);
-    await db.asyncRun('INSERT INTO descriptions (objectID, description, createTime) VALUES(?,?,?)', hit.objectID, description, hit.created_at_i)
-    return description
-}
-
-async function getDescription(hit, url) {
-    const hnewsURL = getHNewsURL(hit)
-    const mainDescription = await getMainDescription(hit, url);
-
-    let description = '<p>';
-    if (hit.url) {
-        const encURL = he.encode(hit.url)
-        description += `URL: <a href="${encURL}">${encURL}</a>, `
-    }
-    description += `See on <a href="${he.encode(hnewsURL)}">Hacker News</a></p>\n`
-    return description + mainDescription
+    return !!row
 }
 
 function getHNewsURL(hit) {
@@ -105,30 +83,77 @@ function getArticleURL(hit) {
     return hit.url ? hit.url : getHNewsURL(hit)
 }
 
-async function addHit(feed, hit) {
-    const articleURL = getArticleURL(hit)
-    let description;
-    try {
-        description = await getDescription(hit, articleURL)
-    } catch(error) {
-        process.stderr.write(`    Failed: ${error}\n`);
-        description = `Couldn't get: ${articleURL} - ${error}`
-    }
-    const date = new Date(hit.created_at_i * 1000)
-    // console.error("   ", date.toISOString())
+async function getDescription(hit) {
+    const mainDescription = await readability(getArticleURL(hit));
 
-    feed.addItem({
-        title:
-            `${hit.url ? '' : 'HNInternal '}${hit.title} (${hit.points} pts)`,
-        link: hit.url,
-        // content: description,
+    let description = '<p>';
+    if (hit.url) {
+        const encURL = he.encode(hit.url)
+        description += `URL: <a href="${encURL}">${encURL}</a>, `
+    }
+    description += `See on <a href="${he.encode(getHNewsURL(hit))}">Hacker News</a></p>\n`
+    return description + mainDescription
+}
+
+async function addHitToDB(hit) {
+    const url = getArticleURL(hit)
+    const hnewsURL = getHNewsURL(hit)
+
+    process.stderr.write(`Getting: ${url}\n`);
+
+    let description = '<p>';
+    if (hit.url) {
+        const encURL = he.encode(hit.url)
+        description += `URL: <a href="${encURL}">${encURL}</a>, `
+    }
+    description +=
+        `See on <a href="${he.encode(hnewsURL)}">Hacker News</a></p>\n`
+    description += await readability(url);
+
+    const title =
+        `${hit.url ? '' : 'HNInternal: '}${hit.title} (${hit.points} pts)`
+
+    await db.asyncRun(`
+        INSERT INTO articles (
+            objectID,
+            createTime,
+            title,
+            description,
+            url
+        )
+        VALUES(?,?,?,?,?)`,
+        hit.objectID,
+        hit.created_at_i,
+        title,
         description,
+        url
+    )
+}
+
+async function addArticleToFeed(feed, article) {
+    const date = new Date(article.createTime * 1000)
+    // console.log("   ", date.toISOString())
+    feed.addItem({
+        title: article.title,
+        id: article.objectID,
+        link: article.url,
+        description: article.description,
         date,
     })
 }
 
 async function start() {
     initDatabase()
+
+    const response = await axios.get(jsonURL);
+    for (hit of response.data.hits) {
+        // Don't add the same article twice
+        if (await dbHasArticle(hit.objectID)) {
+            continue;
+        }
+        await addHitToDB(hit);
+    }
+
     const feed = new Feed({
       title: "Hacker News 100 - Readable Contents",
       link: jsonURL,
@@ -141,12 +166,18 @@ async function start() {
       }
     });
 
-    const response = await axios.get(jsonURL);
-    for (hit of response.data.hits) {
-        await addHit(feed, hit);
-        // break;
+    let articles = await db.asyncAll(
+        `SELECT *
+           FROM articles
+          WHERE createTime > strftime('%s', 'now') - 24*60*60
+       ORDER BY createTime DESC`
+    )
+    for (let article of articles) {
+        addArticleToFeed(feed, article)
     }
+
     process.stdout.write(feed.rss2());
+
     db.close()
 }
 
