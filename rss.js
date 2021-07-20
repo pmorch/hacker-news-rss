@@ -65,7 +65,16 @@ async function readability(url) {
     var doc = getJSDOM(html, url)
     let reader = new Readability(doc.window.document);
     let article = reader.parse();
-    return article != null ? article.content : '&lt;Unparsable&gt;';
+    if (article == null || (
+        ! article.title &&
+        ! article.byline &&
+        ! article.dir &&
+        ! article.excerpt &&
+        ! article.siteName
+    )) {
+        return '&lt;Unparsable&gt;'
+    }
+    return article.content;
 }
 
 async function updateArticleInDB(objectID) {
