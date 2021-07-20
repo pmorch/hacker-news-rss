@@ -13,12 +13,15 @@ source feed mentions a post later with higher points. That means another title,
 and Feedly treats that as a new post entry. That leeds to duplicates in the
 feed as viewed in Feedly.
 
-To work around these two issues: We first read the source feed. For each item
+To work around the first issue: We first read the source feed. For each item
 we check if it is in the database already, and if it isn't call readability for
 this article, and put the final result in the database. Afterwards, we `SELECT`
 all articles from the last 24 hours and create a feed with them. This has the
 advantage that if a feed disappears in the source, it won't in this output.
-Duplicates are avoided. However, the "points" aren't updated.
+Duplicates are avoided.
+
+To avoid duplicates when "points" are updated, I've tried using a good ID for
+each article.
 
 # Dependencies
 

@@ -11,7 +11,7 @@ const he = require('he');
 
 const jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
 
-const dbFile = 'hacker-news-descriptions.db';
+const dbFile = 'articles.db';
 const db = new sqlite3.Database(dbFile)
 db.serialize()
 
@@ -34,6 +34,7 @@ async function initDatabase() {
                 objectID integer primary key,
                 createTime integer,
                 title text,
+                points integer,
                 description text,
                 url text
             )
@@ -67,12 +68,28 @@ async function readability(url) {
     return article != null ? article.content : '&lt;Unparsable&gt;';
 }
 
-async function dbHasArticle(objectID) {
+async function updateArticleInDB(objectID) {
     let row = await db.asyncGet(
-        `SELECT objectID FROM articles WHERE objectID=?`,
-        objectID
+        `SELECT points FROM articles WHERE objectID=?`,
+        hit.objectID
     )
-    return !!row
+    if (! row)
+        return false
+    if (row.points != hit.points) {
+        process.stderr.write(
+            `Updating points ${row.points}->${hit.points} for: ${
+                getArticleURL(hit)
+            }\n`
+        );
+        db.asyncRun(
+            `UPDATE articles
+                SET points=?
+              WHERE objectID=?`,
+            hit.points,
+            hit.objectID
+        )
+    }
+    return true
 }
 
 function getHNewsURL(hit) {
@@ -110,21 +127,22 @@ async function addHitToDB(hit) {
         `See on <a href="${he.encode(hnewsURL)}">Hacker News</a></p>\n`
     description += await readability(url);
 
-    const title =
-        `${hit.url ? '' : 'HNInternal: '}${hit.title} (${hit.points} pts)`
+    const title = `${hit.url ? '' : 'HNInternal: '}${hit.title}`
 
     await db.asyncRun(`
         INSERT INTO articles (
             objectID,
             createTime,
             title,
+            points,
             description,
             url
         )
-        VALUES(?,?,?,?,?)`,
+        VALUES(?,?,?,?,?,?)`,
         hit.objectID,
         hit.created_at_i,
         title,
+        hit.points,
         description,
         url
     )
@@ -132,9 +150,11 @@ async function addHitToDB(hit) {
 
 async function addArticleToFeed(feed, article) {
     const date = new Date(article.createTime * 1000)
+
+    const title = `${article.title} (${article.points} pts)`
     // console.log("   ", date.toISOString())
     feed.addItem({
-        title: article.title,
+        title,
         id: article.objectID,
         link: article.url,
         description: article.description,
@@ -148,7 +168,7 @@ async function start() {
     const response = await axios.get(jsonURL);
     for (hit of response.data.hits) {
         // Don't add the same article twice
-        if (await dbHasArticle(hit.objectID)) {
+        if (await updateArticleInDB(hit)) {
             continue;
         }
         await addHitToDB(hit);
