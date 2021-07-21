@@ -10,6 +10,7 @@ const util = require('util');
 const he = require('he');
 
 const jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
+const detailLimit = 200;
 
 const dbFile = 'articles.db';
 const db = new sqlite3.Database(dbFile)
