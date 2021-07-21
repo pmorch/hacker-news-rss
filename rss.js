@@ -62,10 +62,23 @@ function getJSDOM(text, url) {
 
 async function readability(url) {
     const response = await axios.get(url)
+
+    // See Raw PDF contents shown as readable contents · Issue #703 ·
+    // mozilla/readability
+    // https://github.com/mozilla/readability/issues/703
+    if (! (response.headers['content-type'] &&
+           response.headers['content-type'].match(/html|xml/)
+    ))
+        return '&lt;Not HTML&gt;'
+
     html = response.data
     var doc = getJSDOM(html, url)
     let reader = new Readability(doc.window.document);
     let article = reader.parse();
+
+    // Also see Raw PDF contents shown as readable contents · Issue #703 ·
+    // mozilla/readability
+    // https://github.com/mozilla/readability/issues/703
     if (article == null || (
         ! article.title &&
         ! article.byline &&
