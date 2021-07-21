@@ -61,7 +61,12 @@ function getJSDOM(text, url) {
 }
 
 async function readability(url) {
-    const response = await axios.get(url)
+    let response
+    try {
+	response = await axios.get(url)
+    } catch(error) {
+	return `Couldn't get ${url}: ${error}`
+    }
 
     // See Raw PDF contents shown as readable contents · Issue #703 ·
     // mozilla/readability
