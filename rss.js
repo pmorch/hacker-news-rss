@@ -234,4 +234,16 @@ async function start() {
     db.close()
 }
 
-start()
+async function processArgUrls(urls) {
+    for (let url of urls) {
+        console.log(url)
+        console.log(await readability(url))
+    }
+}
+
+let urls = [ ...process.argv ].slice(2);
+if (urls.length > 0) {
+    processArgUrls(urls)
+} else {
+    start()
+}
