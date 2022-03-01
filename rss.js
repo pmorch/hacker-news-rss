@@ -11,6 +11,7 @@ const he = require('he');
 
 const jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll%29&numericFilters=points%3E100';
 const detailLimit = 200;
+const AXIOS_TIMEOUT = 10000
 
 const dbFile = 'articles.db';
 const db = new sqlite3.Database(dbFile)
@@ -63,7 +64,9 @@ function getJSDOM(text, url) {
 async function readability(url) {
     let response
     try {
-	response = await axios.get(url)
+	response = await axios.get(url, {
+            timeout: AXIOS_TIMEOUT
+        })
     } catch(error) {
 	return `Couldn't get ${url}: ${error}`
     }
@@ -193,7 +196,9 @@ async function addArticleToFeed(feed, article) {
 async function start() {
     initDatabase()
 
-    const response = await axios.get(jsonURL);
+    const response = await axios.get(jsonURL, {
+        timeout: AXIOS_TIMEOUT
+    });
     for (hit of response.data.hits) {
         // Don't add the same article twice
         if (await updateArticleInDB(hit)) {
