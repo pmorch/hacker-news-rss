@@ -54,7 +54,7 @@ function getJSDOM(text, url) {
                     error.detail.length}, first ${detailLimit
                     } chars:\n${error.detail.substring(0, detailLimit)}`
             }
-            console.log("vconsole " + event, error)
+            console.error("vconsole " + event, error)
         });
     }
     return new JSDOM(text, { virtualConsole, url })
