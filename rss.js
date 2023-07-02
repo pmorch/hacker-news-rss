@@ -86,6 +86,7 @@ async function readability(url) {
     var doc = getJSDOM(html, url)
     let reader = new Readability(doc.window.document);
     let article = reader.parse();
+    doc.window.close();
 
     // Also see Raw PDF contents shown as readable contents · Issue #703 ·
     // mozilla/readability
