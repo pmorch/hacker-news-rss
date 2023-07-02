@@ -47,6 +47,14 @@ async function initDatabase() {
     }
 }
 
+async function deleteOldArtcilesFromDatabase() {
+    // 30 days ago
+    await db.asyncRun(`
+        DELETE FROM articles
+        WHERE createTime < STRFTIME('%s') - 30*24*60*60;
+    `);
+}
+
 function getJSDOM(text, url) {
     const virtualConsole = new VirtualConsole()
     for (let event of [ 'jsdomError', 'error', 'warn', 'info', 'dir' ]) {
@@ -135,18 +143,6 @@ function getArticleURL(hit) {
     return hit.url ? hit.url : getHNewsURL(hit)
 }
 
-async function getDescription(hit) {
-    const mainDescription = await readability(getArticleURL(hit));
-
-    let description = '<p>';
-    if (hit.url) {
-        const encURL = he.encode(hit.url)
-        description += `URL: <a href="${encURL}">${encURL}</a>, `
-    }
-    description += `See on <a href="${he.encode(getHNewsURL(hit))}">Hacker News</a></p>\n`
-    return description + mainDescription
-}
-
 async function addHitToDB(hit) {
     const url = getArticleURL(hit)
     const hnewsURL = getHNewsURL(hit)
@@ -212,7 +208,7 @@ async function start() {
     }
 
     const feed = new Feed({
-      title: "Hacker News 100 - Readable Contents",
+      title: "HN100 - Readable Contents",
       link: jsonURL,
       description: "Uses Readability to add bodies to the RSS feed",
       language: "en",
@@ -233,7 +229,9 @@ async function start() {
         addArticleToFeed(feed, article)
     }
 
-    process.stdout.write(feed.rss2());
+    process.stdout.write(feed.rss2())
+
+    deleteOldArtcilesFromDatabase()
 
     db.close()
 }

@@ -1,3 +1,2 @@
 #  cat /etc/cron.d/hackerNewsCronD
-0 *     * * *     peter  /home/peter/hacker-news-rss/runRss.sh
-
+0 *     * * *     peter  /home/peter/work/hacker-news-rss/runRss.sh

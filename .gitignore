@@ -1,6 +1,6 @@
-output
-python
-hacker-news-descriptions.db
-descriptions.db
-package-lock.json
 node_modules
+articles.db
+run.log
+hn100-sshkey
+hn100-sshkey.pub
+github-output/
