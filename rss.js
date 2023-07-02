@@ -39,7 +39,10 @@ async function initDatabase() {
                 points integer,
                 description text,
                 url text
-            )
+            );
+        `);
+        await db.asyncRun(`
+            CREATE INDEX createTimeIndex on articles(createTime);
         `);
     }
 }
