@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 cd $(dirname $0)
-logfile=run.log
+logfile=data/run.log
 
-ghOutDir=github-output
+ghOutDir=data/github-output
 outfile=$ghOutDir/hn100.xml
 echo '*******************************' >> $logfile
 date >> $logfile
-./rss.js > $outfile 2>>$logfile
+node ./rss.js > $outfile 2>>$logfile
 
 gitCommitPush() {
     commitExitCode=0

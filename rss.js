@@ -13,7 +13,7 @@ const jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll
 const detailLimit = 200;
 const AXIOS_TIMEOUT = 10000
 
-const dbFile = 'articles.db';
+const dbFile = 'data/articles.db';
 const db = new sqlite3.Database(dbFile)
 db.serialize()
 
