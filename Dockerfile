@@ -1,7 +1,13 @@
-FROM node:latest
+FROM ubuntu:latest
 
-# Sorry, but there already is a node:node group:user with ids 1000:1000
-# And this happens to be the group:user that I use...
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  git \
+  openssh-client \
+  nodejs \
+  npm \
+  && rm -rf /var/lib/apt/lists/*
+
+# This happens to be the group:user that I use...
 ENV userID=1248
 ENV groupID=1248
 RUN groupadd -g $groupID user && useradd -g $groupID -u $userID -m -s /bin/bash user
@@ -15,4 +21,5 @@ WORKDIR /hacker
 COPY package.json package-lock.json ./
 RUN npm install
 COPY rss.js runRss.sh ./
+USER $userID:$groupID
 ENTRYPOINT ./runRss.sh
