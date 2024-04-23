@@ -23,24 +23,50 @@ Duplicates are avoided.
 To avoid duplicates when "points" are updated, I've tried using a good ID for
 each article.
 
+# Run on NAS, lip.morch.com or base?
+
+The thing is that this uses quite a lot of RAM. On lip.morch.com with 4GB of RAM, this would sometimes OOM. So we run it on base.
+
 # Dependencies
 
-    sudo apt install docker.io docker-compose npm
-    npm install
+```shell
+sudo docker build -t hacker-news-rss .
+```
+
+...or to run it without docker:
+
+```shell
+sudo apt install npm
+npm install
+```
 
 # To tidy up DB later
 
-    sqlite3 descriptions.db 'SELECT COUNT(*) FROM descriptions;'
-    sqlite3 descriptions.db 'DELETE FROM descriptions; VACUUM;'
+```
+sqlite3 data/articles.db 'SELECT COUNT(1) from articles;'
+sqlite3 data/articles.db 'DELETE FROM articles; VACUUM;'
+```
+
+or simply
+
+```
+rm data/articles.db
+```
 
 # Run
-    ./runRss.sh
 
-# Docker nginx to serve the output
+```shell
+sudo docker run --rm --name hacker-news-rss -v $PWD/data:/hacker/data hacker-news-rss
+```
+...or to run it without docker:
 
-    docker-compose up -d
+```shell
+./runRss.sh
+```
 
 # Make sure this runs periodically
 
-    sudo cp hackerNewsCronD /etc/cron.d
-    sudo chown root: /etc/cron.d/hackerNewsCronD
+```shell
+sudo cp hackerNewsCronD /etc/cron.d
+sudo chown root: /etc/cron.d/hackerNewsCronD
+```

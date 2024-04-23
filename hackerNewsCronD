@@ -1,2 +1,4 @@
+MAILTO=pmorch@gmail.com
+
 #  cat /etc/cron.d/hackerNewsCronD
-0 *     * * *     peter  /home/peter/work/hacker-news-rss/runRss.sh
+0 *     * * *     root   cronic docker run --rm --name hacker-news-rss -v /home/peter/work/hacker-news-rss/data:/hacker/data hacker-news-rss
