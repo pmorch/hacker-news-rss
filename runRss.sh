@@ -4,6 +4,7 @@ cd $(dirname $0)
 logfile=data/run.log
 
 ghOutDir=data/github-output
+mkdir -p $ghOutDir
 outfile=$ghOutDir/hn100.xml
 echo '*******************************' >> $logfile
 date >> $logfile

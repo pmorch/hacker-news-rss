@@ -29,6 +29,20 @@ The thing is that this uses quite a lot of RAM. On lip.morch.com with 4GB of RAM
 
 # Dependencies
 
+You'll need these two files, that aren't saved in the git repo (or create new
+ones in github):
+
+* 'data/hn100-sshkey'
+* 'data/hn100-sshkey.pub'
+
+And
+```shell
+mkdir -p data
+git clone git@github.com:pmorch/hacker-news-rss.git data/github-output
+```
+
+Build docker image:
+
 ```shell
 sudo docker build -t hacker-news-rss .
 ```
@@ -36,7 +50,8 @@ sudo docker build -t hacker-news-rss .
 ...or to run it without docker:
 
 ```shell
-sudo apt install npm
+# nix-shell uses shell.nix that installs nodejs and sqlite
+nix-shell
 npm install
 ```
 
