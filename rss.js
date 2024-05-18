@@ -59,14 +59,20 @@ function getJSDOM(text, url) {
     const virtualConsole = new VirtualConsole()
     for (let event of [ 'jsdomError', 'error', 'warn', 'info', 'dir' ]) {
         virtualConsole.on(event, (error) => {
-            if (error.detail && error.detail.length &&
-                error.detail.length > detailLimit) {
-                error.detail =
-                    `long string, length:${
-                    error.detail.length}, first ${detailLimit
-                    } chars:\n${error.detail.substring(0, detailLimit)}`
-            }
-            console.error("vconsole " + event, error)
+          // CSS parsing errors are a limitation of JSDOM
+          // https://stackoverflow.com/questions/69906136/console-error-error-could-not-parse-css-stylesheet
+          if (error.toString() == "Error: Could not parse CSS stylesheet" &&
+            error.type && error.type == "css parsing") {
+            console.log("(ignoring known css parsing error)")
+            return
+          }
+          if (error.detail && error.detail.length &&
+            error.detail.length > detailLimit) {
+            error.detail =
+              `long string, length:${error.detail.length}, first ${detailLimit
+              } chars:\n${error.detail.substring(0, detailLimit)}`
+          }
+          console.error("vconsole " + event, error)
         });
     }
     return new JSDOM(text, { virtualConsole, url })
@@ -75,11 +81,11 @@ function getJSDOM(text, url) {
 async function readability(url) {
     let response
     try {
-	response = await axios.get(url, {
-            timeout: AXIOS_TIMEOUT
-        })
-    } catch(error) {
-	return `Couldn't get ${url}: ${error}`
+      response = await axios.get(url, {
+        timeout: AXIOS_TIMEOUT
+      })
+    } catch (error) {
+      return `Couldn't get ${url}: ${error}`
     }
 
     // See Raw PDF contents shown as readable contents · Issue #703 ·
