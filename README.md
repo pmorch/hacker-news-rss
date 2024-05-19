@@ -38,7 +38,7 @@ ones in github):
 And
 ```shell
 mkdir -p data
-git clone git@github.com:pmorch/hacker-news-rss.git data/github-output
+git git@github.com:pmorch/HackerNews100.git data/github-output
 ```
 
 Build docker image:

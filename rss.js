@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#! /usr/bin/env node
 const { Readability } = require('@mozilla/readability');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const axios = require('axios');
@@ -13,7 +13,11 @@ const jsonURL = 'https://hn.algolia.com/api/v1/search_by_date?tags=%28story,poll
 const detailLimit = 200;
 const AXIOS_TIMEOUT = 10000
 
-const dbFile = 'data/articles.db';
+if (process.argv.length < 3) {
+  console.error("Usage: ./rss.js dbFile [url url...")
+  process.exit(1)
+}
+const dbFile=process.argv[2]
 const db = new sqlite3.Database(dbFile)
 db.serialize()
 
@@ -249,7 +253,7 @@ async function processArgUrls(urls) {
     }
 }
 
-let urls = [ ...process.argv ].slice(2);
+let urls = [ ...process.argv ].slice(3);
 if (urls.length > 0) {
     processArgUrls(urls)
 } else {

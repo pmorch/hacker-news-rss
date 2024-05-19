@@ -1,14 +1,16 @@
-#!/bin/bash
+#! /usr/bin/env bash
 set -e
-cd $(dirname $0)
-logfile=data/run.log
+dbFile=$1; shift
+ghOutDir=$1; shift
 
-ghOutDir=data/github-output
-mkdir -p $ghOutDir
+if [ "$ghOutDir" = "" -o ! -d $ghOutDir/.git ] ; then
+  echo '*Error*: <dbFile> <githubOutDir>'
+fi
+
 outfile=$ghOutDir/hn100.xml
-echo '*******************************' >> $logfile
-date >> $logfile
-node ./rss.js > $outfile 2>>$logfile
+echo '*******************************'
+date +'%Y-%M-%d %T %Z'
+node ./rss.js $dbFile > $outfile
 
 gitCommitPush() {
     commitExitCode=0
@@ -18,7 +20,7 @@ gitCommitPush() {
     fi
 }
 
-gitCommitPush >> $logfile 2>&1
+gitCommitPush
 
-date >> $logfile
-echo '-------------------------------' >> $logfile
+date +'%Y-%M-%d %T %Z'
+echo '-------------------------------'
